@@ -1,0 +1,14 @@
+Trabajo Práctico Nro 2 - Arquitectura de computadoras y Sistemas Operativos
+Alumno: Mateo Giacometti
+Correo Electrónico: mgiacometti@udesa.edu.ar
+
+***Fase 1*** 
+En esta etapa del código, la función "phase_1" se encarga de comparar dos strings utilizando una función adicional llamada "strings_not_equal". En el caso que
+ambas cadenas de texto sean iguales, se finaliza la ejecución de la función. De lo contrario, se llama a la función "explode_bomb" para que en la misma se detone la 
+bomba. En particular, las dos cadenas de texto que se comparan son aquella que se extrae de la primer linea del archivo "inputs.txt" (cuya dirección en memoria se 
+almacena en el registro "rdx" en "main") y un string cuya dirección de memoria se encuentra almacenada en el registro "rsi" en "main". 
+Para poder obtener el input correspondiente que permitiera avanzar a la siguiente fase, se analizó con gdb la función correspodiente a "phase_1" lo que llevo poteriormente
+a estudiar la función "
+
+
+
