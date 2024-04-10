@@ -3,12 +3,81 @@ Alumno: Mateo Giacometti
 Correo Electrónico: mgiacometti@udesa.edu.ar
 
 ***Fase 1*** 
-En esta etapa del código, la función "phase_1" se encarga de comparar dos strings utilizando una función adicional llamada "strings_not_equal". En el caso que
-ambas cadenas de texto sean iguales, se finaliza la ejecución de la función. De lo contrario, se llama a la función "explode_bomb" para que en la misma se detone la 
-bomba. En particular, las dos cadenas de texto que se comparan son aquella que se extrae de la primer linea del archivo "inputs.txt" (cuya dirección en memoria se 
-almacena en el registro "rdx" en "main") y un string cuya dirección de memoria se encuentra almacenada en el registro "rsi" en "main". 
-Para poder obtener el input correspondiente que permitiera avanzar a la siguiente fase, se analizó con gdb la función correspodiente a "phase_1" lo que llevo poteriormente
-a estudiar la función "
+En esta etapa del código, la función "phase_1" se encarga de comparar dos strings. En particular, las dos cadenas de texto que se comparan son aquella que se extrae de 
+la primer línea del archivo "inputs.txt" (cuya dirección en memoria se almacena en el registro "rdi" desde "main") y un string cuya dirección de memoria se encuentra 
+almacenada en el registro "rsi" desde "phase_1". Esta comparación se realiza analizando si la cantidad de caracteres que posee cada string es igual utilizando la función 
+“string_length“ (se calcula individualmente a longitud de cada cadena) llamada desde dentro de la función “strings_not_equal“ donde posteriormente se analiza byte a byte si 
+los caracteres de ambas coinciden. En el caso que ambas cadenas de texto sean iguales, se finaliza la ejecución de la función y se continúa la ejecución del programa. Si ocurre 
+que las cadenas son diferentes, se llama a la función "explode_bomb" para que en la misma se detone la bomba. . 
+Para poder obtener el input correspondiente que permitiera avanzar a la siguiente fase, se analizó con gdb la función correspondiente a "phase_1" hasta el punto en el cual 
+se le asigna una dirección de memoria para almacenar al registro “rsi”. En esa instancia, se buscó y visualizar en formato string los datos almacenados en esa direccion de 
+memoria, descubriendo así la frase para el input necesaria para avanzar de fase. 
+
+***Fase 2***
+En esta etapa del código, la función "phase_2" se encarga de trabajar con dos números extraídos del segundo renglón del archivo “inputs.txt”, los cuales deberán cumplir una 
+serie de condiciones especiales para evitar la detonación de la bomba. Estas condiciones son que el resultado de realizar la operación n_1 + n_2*1 - 32 de como resultado un 
+número cuya representación binaria en 32bits esté compuesto por exactamente once números 1 y que a su vez el resultado de hacer la operación lógica XOR entre n_1 y n_2 diera 
+como resultado un número negativo (siendo n_1 y n_2 el primer y segundo número presente en la línea correspondiente de “inputs.txt”). 
+A la hora analizar el código para poder avanzar de fase, se logró descifrara que tipo de datos y que cantidad deben ingresarse en el input gracias a la presencia de dos 
+llamados a la función “strtol” dentro de “phase_2”. Como esta función se utiliza para convertir una cadena de texto a un número entero, se pudo descubrir que cada llamado en 
+“phase_2” se realizaba con la finalidad de extraer y almacenar en registros distintos dos números obtenidos desde “inputs.txt”. Una vez encontrados los registros donde se 
+guardaban ambos números y ver que en el registros “edi” se guardaba el resultado de la operación descrita anteriormente, se procedió a analizar el funcionamiento de la función 
+que se llamaba a posteriori denominada “misterio”. Al ingresar a la función, se vió que al principio de la misma se realiza un bucle de 32 iteraciones donde en cada iteración 
+se realiza un shift aritmético a la derecha de lo que se encontraba en el registro de la operación entre ambos números (en cada iteración el desplazamiento es un lugar más 
+grande que el anterior), una operación AND entre el número shifteado y el número 1 y finalmente se suma el valor de esta operación a un registro (“edx” en este caso). De esta 
+etapa se puedo deducir que se estaba realizando un conteo de la cantidad de bits en 1 con los que contaba el registro con la operación, el cual debía ser igual a 11 ya que al 
+final del bucle se realizaba una comparación entre “edx” y el número 11, el cual si no se cumplia activaba un ‘Jump If Not Equal” que saltaba a un llamado a la función que 
+detona la bomba. Una vez se avanza en esta etapa de la función, se pasa a una última donde se realiza un  XOR entre los registros que contiene cada número obtenido del input. 
+El resultado de esta operación debe ser un número negativo para que se realice el “Jump If Sing” que se encuentra debajo ya que de otra forma en la operación siguiente se 
+detonará la bomba. Una vez que termina “misterio” sin ningún inconveniente, la función “phase_2” hará lo mismo. Finalmente, se probaron diferentes combinaciones de números que 
+cumplieran con las condicionales para poder validar las hipótesis surgidas del análisis realizado. 
+
+***Fase 3***
+En esta parte del programa, la función “phase_3” se encarga de trabajar una palabra y un número extraídos del tercer renglón del archivo “inputs.txt”, los cuales deberán cumplir
+una serie de condiciones especiales para evitar la detonación de la bomba. En esta condiciones son que la palabra presente en el input se encuentre dentro de las palabras 
+listadas en el archivo “palabras.txt”, que la misma pueda ser encontrada por la búsqueda binaria efectuada en la función “cuenta” en más de 6 recursiones y menos de 11 
+recursiones y que el número que se encuentre en el input sea igual a la cantidad de recursiones que se efectuaron hasta encontrar la palabras. 
+A la hora analizar el código para poder avanzar de fase, se logró descifrara que tipo de datos y que cantidad deben ingresarse en el input gracias a la presencia de una 
+llamada a la función “sscanf” dentro de “phase_3”. La función “sscanf” se encarga de analizar si en una cadena de caracteres se encuentra un formato de datos específico y 
+se utiliza dentro de la función “phase_3” para hacer explotar la bomba si directamente se pasa como input tipos de datos inválidos. Al analizar el registro “rsi”, que fungía 
+como un parámetro para la función “sscanf”, se encontraba la dirección de memoria donde se encontraba el siguiente string “%s %d”, lo cual nos permitió deducir que esta fase 
+requiere como inputs una cadena de caracteres y un número entero. Posteriormente se siguió avanzando en la función hasta ingresar dentro de “cuenta”. Allí se logró descifrar 
+que la recursión que realiza la dentro de la misma corresponde a una búsqueda binaria ya que cada palabra cuya dirección de memoria iba actualizando el registro “rsi” 
+correspondía a la mitad de las particiones que se van generando a medida que se ejecuta una búsqueda binaria. A su vez, se logró detectar que las recursiones no podian ser 
+superiores a 11 ya que si el registro “eax”, que fungía como contador de recursiones, excedia este valor un “jg” realizará un salto a un llamado a la función para explotar la 
+bomba. Una vez finalizada “cuenta”, se logró interpretar a través de vislumbrar una serie de comparaciones y “jumps” realizados al final de la función “phase_3” que el número 
+pasado en el input debía coincidir con la cantidad de recursiones realizadas a la vez que el mismo debía ser un valor superior a 6. Finalmente, para encontrar valores de inputs 
+adecuados se corrió la función “cuenta” haciéndola realizar un número acorde de recursiones (mayor a 6 y menor a 11) y se busco que palabra se encontraba en cada etapa. Luego, 
+se probaron las palabras encontradas junto al número correspondiente de recursiones en las cuales aparecieron. 
+
+***Fase 4***
+En esta parte del programa, la función “phase_4” se encarga de trabajar con dos números extraídos del cuarto renglón del archivo “inputs.txt”. El primer número debe ser un 
+entero que se encuentre entre 0 y 14 (si es algo superior se trunca a un valor entre 0 o 15)  ya que el mismo se utilizará para indexar en un arreglo y el segundo número debe 
+ser igual a la suma de los números que se encuentren dentro de los índices que se accedan a lo largo de la ejecución de la función “phase_4”. 
+Al igual que en la fase anterior, se logró descubrir que tipo y cantidad de datos debe contener el input gracias a analizar el registro que almacena la dirección de memoria con 
+el formato que se deseaba analizar con un llamado a “sscanf” (el formato “%d %d%” por lo que era necesario ingresar dos enteros). Luego, se puedo descifrar que el primer dígito 
+debe estar en un rango de 0 a 14 debido a una operación AND que se realiza entre el registro contiene el número (“eax” en este caso) y el número 15 y posteriormente a la 
+comparación entre el resultado de esta operación y el 15 junto a un “je” hacia un call a la función de detonación. Posteriormente, se ingresa a un bucle el cual va indexando 
+en un arreglo y usando en la siguiente ejecución el valor almacenado en esa dirección como índice. Analizando el bucle, se puede descubrir que era necesario llegar al índice 
+del arreglo que contiene el número 15 para poder salir del bucle a la vez que esto debía ser conseguido exactamente a las 6 iteraciones para que una vez terminado el bucle no 
+se realice un “jne” hacía una llamada al detonador de la bomba. Finalmente, se realiza una comparación entre el segundo número del input y el valor de la suma de los elementos 
+de los índices a los que se ingresaron en el loop, el cual debe ser igual para poder finalizar el programa (si no es igual, se detona la bomba). Para encontrar los valores 
+correspondientes se probó con diferentes valores de indices para el arreglo hasta encontrar el adecuado y posteriormente se realizó la suma de los elementos correspondientes 
+para saber qué número colocarse como segundo input. 
+
+***Fase Secreta***
+Esta fase fue encontrada mediante el análisis en detalle de la función “phase_defused”. Al encontrar un llamado a la función “secret_phase”, se comenzó a analizar que 
+contenían todos los registros cada vez que era llamada “phase_defused”. Gracias nuevamente a la presencia de un “sscanf” se pudo encontrar un formato de input correcto para 
+ingresar a la Fase 3, el cual consistía de la misma entrada original pero con un string adicional (“%s %d %s”). Buscando exhaustivamente se pudo descubrir el registro que 
+almacenaba la dirección de memoria al la contraseña de la fase (“abrete_sesamo” ).
+La fase secreta consiste en un árbol de búsqueda binaria el cual realizaba la búsqueda de forma recursiva. Para la resolución se decidió analizar los componentes del árbol 
+de memoria para así poder determinar como estaba compuesto. Una vez que se obtuvo la cantidad de nodos y sus respectivos valores, se procedió a usar como input distintos 
+valores de los nodos hoja encontrados hasta toparme con aquel que consiguiera pasar la fase (básicamente que retornara el número 2). 
+
+
+
+
+
 
 
 
